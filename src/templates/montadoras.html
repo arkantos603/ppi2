@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.7/dist/axios.min.js"></script>
+    <script src="index.js" defer></script>
+    <title>PatroCarsV2 - Montadoras</title>
+</head>
+<body>
+    <h1>PatroCarsV2</h1>
+    <button onclick="window.location.href='modelos.html'">Ir para Modelos</button>
+    <button onclick="window.location.href='veiculos.html'">Ir para Veiculos</button>
+
+    <h2>Nova montadora</h2>
+    <form id="form_montadora">
+        <input type="text" id="nome" placeholder="Nome da Montadora..">
+        <input type="text" id="pais" placeholder="Pais...">
+        <input type="int" id="ano" placeholder="Ano da Montadora">
+        <input type="submit" value="Salvar Montadora" />
+      </form>
+      <h2>Montadoras cadastradas</h2>
+      <ul id="montadoras_list">
+    
+      </ul>
+</body>
+</html>

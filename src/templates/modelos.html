@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.7/dist/axios.min.js"></script>
+    <script src="index.js" defer></script>
+    <title>PatroCarsV2 - Modelos de Veículos</title>
+</head>
+<body>
+    <h1>PatroCarsV2</h1>
+    <button onclick="window.location.href='montadoras.html'">Ir para Montadoras</button>
+    <button onclick="window.location.href='veiculos.html'">Ir para Veiculos</button>
+
+    <h2>Novo Modelo de Veículo</h2>
+    <form id="form_modelo">
+        <input type="text" id="nome" placeholder="Nome do Modelo..">
+        <input type="text" id="montadora_id" placeholder="ID da Montadora..">
+        <input type="number" id="valor_referencia" placeholder="Valor de Referência..">
+        <input type="number" id="motorizacao" step="0.1" placeholder="Motorização (ex: 2.0)">
+        <label for="turbo">Turbo</label>
+        <input type="checkbox" id="turbo">
+        <label for="automatico">Automático</label>
+        <input type="checkbox" id="automatico">
+        <input type="submit" value="Salvar Modelo" />
+    </form>
+
+    <h2>Modelos de Veículos Cadastrados</h2>
+    <ul id="modelos_list">
+    </ul>
+
+</body>
+</html>
