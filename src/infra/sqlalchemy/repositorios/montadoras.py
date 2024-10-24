@@ -39,3 +39,6 @@ class MontadoraRepositorio:
             self.db.commit()
             return montadora_bd
         return None
+
+    def montadora_existe(self, montadora_id: UUID):
+        return self.db.query(models.Montadora).filter(models.Montadora.id == montadora_id).first() is not None

@@ -1,23 +1,20 @@
 from fastapi import FastAPI, HTTPException, Depends
-from typing import List
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
 from infra.sqlalchemy.config.database import get_db, criar_bd
-from uuid import UUID, uuid4
-from schemas.schemas import Montadora, ModeloVeiculo, Veiculo
+from uuid import UUID
+from schemas.schemas import Montadora as MontadoraSchema, ModeloVeiculo as ModeloVeiculoSchema, Veiculo as VeiculoSchema
+from infra.sqlalchemy.models.models import ModeloVeiculo
 from infra.sqlalchemy.repositorios.montadoras import MontadoraRepositorio
+from infra.sqlalchemy.repositorios.modelos import ModeloRepositorio
+from infra.sqlalchemy.repositorios.veiculos import VeiculoRepositorio
 import uuid
-
 
 app = FastAPI()
 
 criar_bd()
 
-origins = ['http://localhost:5500']
-
-banco_montadoras: List[Montadora] = []
-banco_modelos: List[ModeloVeiculo] = []
-banco_veiculos: List[Veiculo] = []
+origins = ['http://localhost:5500', 'http://127.0.0.1:5500']
 
 app.add_middleware(
     CORSMiddleware,
@@ -34,18 +31,16 @@ def montadora_list(db: Session = Depends(get_db)):
     return montadoras
 
 @app.post("/montadoras_save")
-def montadora_save(montadora: Montadora, db: Session = Depends(get_db)):
+def montadora_save(montadora: MontadoraSchema, db: Session = Depends(get_db)):
     montadora_criada = MontadoraRepositorio(db).salvar(montadora)
     return montadora_criada
     
 @app.put("/montadoras_update/{uuid}")
-async def atualizar_montadora(uuid: str, montadora_atualizada: Montadora):
-    for index, montadora in enumerate(banco_montadoras):
-        if montadora.uuid == uuid:
-            banco_montadoras[index] = montadora_atualizada
-            banco_montadoras[index].uuid = uuid
-            return {"mensagem": f"Montadora {montadora_atualizada.nome} atualizada com sucesso"}
-    raise HTTPException(status_code=404, detail="Montadora não encontrada")
+async def atualizar_montadora(uuid: UUID, montadora_atualizada: MontadoraSchema, db: Session = Depends(get_db)):
+    montadora = MontadoraRepositorio(db).atualizar(uuid, montadora_atualizada)
+    if not montadora:
+        raise HTTPException(status_code=404, detail="Montadora não encontrada")
+    return {"mensagem": f"Montadora {montadora.nome} atualizada com sucesso"}
 
 @app.delete("/montadoras_delete/{id}")
 def montadora_delete(id: uuid.UUID, db: Session = Depends(get_db)):
@@ -56,64 +51,66 @@ def montadora_delete(id: uuid.UUID, db: Session = Depends(get_db)):
 
 # Rotas ModeloVeiculo
 @app.get("/modelos_list")
-def modelo_list():
-    return banco_modelos
+def modelo_list(db: Session = Depends(get_db)):
+    modelos = ModeloRepositorio(db).listar()
+    return modelos
 
 @app.post("/modelos_save")
-def modelo_save(modelo: ModeloVeiculo):
-    montadora_existe = any(montadora.uuid == modelo.montadora_id for montadora in banco_montadoras)
-    if not montadora_existe:
-        raise HTTPException(status_code=400, detail="Montadora não encontrada")
-
-    modelo.id = str(uuid4())
-    banco_modelos.append(modelo)
-    return {"mensagem": f"Modelo {modelo.nome} criado com sucesso"}
+def modelo_save(modelo: ModeloVeiculoSchema, db: Session = Depends(get_db)):
+    modelo_criado = ModeloRepositorio(db).salvar(modelo)
+    return modelo_criado
 
 @app.put("/modelos_update/{id}")
-async def atualizar_modelo(id: str, modelo_atualizado: ModeloVeiculo):
-    for index, modelo in enumerate(banco_modelos):
-        if modelo.id == id:
-            banco_modelos[index] = modelo_atualizado
-            banco_modelos[index].id = id
-            return {"mensagem": f"Modelo {modelo_atualizado.nome} atualizado com sucesso"}
-    raise HTTPException(status_code=404, detail="Modelo não encontrado")
+async def atualizar_modelo(id: UUID, modelo_atualizado: ModeloVeiculoSchema, db: Session = Depends(get_db)):
+    modelo_atualizado.montadora_id = UUID(modelo_atualizado.montadora_id)  # Certifica que o montadora_id é um UUID
+    modelo = ModeloRepositorio(db).atualizar(id, modelo_atualizado)
+    if not modelo:
+        raise HTTPException(status_code=404, detail="Modelo não encontrado")
+    return {"mensagem": f"Modelo {modelo.nome} atualizado com sucesso"}
 
 @app.delete("/modelos_delete/{id}")
-async def remover_modelo(id: str):
-    for modelo in banco_modelos:
-        if modelo.id == id:
-            banco_modelos.remove(modelo)
-            return {"mensagem": f"Modelo {modelo.nome} removido com sucesso"}
-    raise HTTPException(status_code=404, detail="Modelo não encontrado")
+def modelo_delete(id: UUID, db: Session = Depends(get_db)):
+    modelo_removido = ModeloRepositorio(db).remover(id)
+    if not modelo_removido:
+        raise HTTPException(status_code=404, detail="Modelo não encontrado")
+    return {"mensagem": f"Modelo {modelo_removido.nome} removido com sucesso"}
 
 # Rotas Veiculo
 @app.get("/veiculos_list")
-def veiculo_list():
-    return banco_veiculos
+def veiculo_list(db: Session = Depends(get_db)):
+    veiculos = VeiculoRepositorio(db).listar()
+    return veiculos
 
 @app.post("/veiculos_save")
-def veiculo_save(veiculo: Veiculo):
-    modelo_existe = any(modelo.id == veiculo.modelo_id for modelo in banco_modelos)
+def veiculo_save(veiculo: VeiculoSchema, db: Session = Depends(get_db)):
+    try:
+        modelo_id = UUID(veiculo.modelo_id)  # Certifica que o modelo_id é um UUID
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Modelo ID inválido")
+
+    modelo_existe = db.query(ModeloVeiculo).filter(ModeloVeiculo.id == modelo_id).first()
     if not modelo_existe:
         raise HTTPException(status_code=400, detail="Modelo não encontrado")
 
-    veiculo.id = str(uuid4())
-    banco_veiculos.append(veiculo)
-    return {"mensagem": f"Veículo com placa {veiculo.placa} criado com sucesso"}
+    veiculo_criado = VeiculoRepositorio(db).salvar(veiculo)
+    return veiculo_criado 
 
 @app.put("/veiculos_update/{id}")
-async def atualizar_veiculo(id: str, veiculo_atualizado: Veiculo):
-    for index, veiculo in enumerate(banco_veiculos):
-        if veiculo.id == id:
-            banco_veiculos[index] = veiculo_atualizado
-            banco_veiculos[index].id = id
-            return {"mensagem": f"Veículo com placa {veiculo_atualizado.placa} atualizado com sucesso"}
-    raise HTTPException(status_code=404, detail="Veículo não encontrado")
+async def atualizar_veiculo(id: UUID, veiculo_atualizado: VeiculoSchema, db: Session = Depends(get_db)):
+    try:
+        if isinstance(veiculo_atualizado.modelo_id, str):
+            veiculo_atualizado.modelo_id = UUID(veiculo_atualizado.modelo_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Modelo ID inválido")
+
+    veiculo = VeiculoRepositorio(db).atualizar(id, veiculo_atualizado)
+    if not veiculo:
+        raise HTTPException(status_code=404, detail="Veículo não encontrado")
+    return {"mensagem": f"Veículo com placa {veiculo_atualizado.placa} atualizado com sucesso"}
 
 @app.delete("/veiculos_delete/{id}")
-async def remover_veiculo(id: str):
-    for veiculo in banco_veiculos:
-        if veiculo.id == id:
-            banco_veiculos.remove(veiculo)
-            return {"mensagem": f"Veículo com placa {veiculo.placa} removido com sucesso"}
-    raise HTTPException(status_code=404, detail="Veículo não encontrado")
+async def remover_veiculo(id: UUID, db: Session = Depends(get_db)):
+    veiculo_removido = VeiculoRepositorio(db).remover(id)
+    if not veiculo_removido:
+        raise HTTPException(status_code=404, detail="Veículo não encontrado")
+    return {"mensagem": f"Veículo com placa {veiculo_removido.placa} removido com sucesso"}

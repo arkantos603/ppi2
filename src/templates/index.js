@@ -1,321 +1,250 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", function() {
     let montadoraEditando = null;
     let modeloEditando = null;
     let veiculoEditando = null;
 
-    async function carregar_montadoras() {
-        try {
-            const response = await axios.get('http://localhost:8000/montadoras_list');
-            const montadoras = response.data;
-            const lista = document.getElementById('montadoras_list');
-
-            if (lista) {
-                lista.innerHTML = '';
-
-                montadoras.forEach(montadora => {
-                    const item = document.createElement('li');
-                    const linha = `Nome: ${montadora.nome}, País: ${montadora.pais}, Ano de fabricação: ${montadora.ano} ID: ${montadora.id}`;
-                    item.innerText = linha;
-
-                    const botaoEditar = document.createElement('button');
-                    botaoEditar.innerText = 'Editar';
-                    botaoEditar.style.marginLeft = '10px';
-
-                    botaoEditar.addEventListener('click', () => {
-                        montadoraEditando = montadora;  // Armazena a montadora atual para edição
-                        document.getElementById('nome').value = montadora.nome;
-                        document.getElementById('pais').value = montadora.pais;
-                        document.getElementById('ano').value = montadora.ano;
-                        document.getElementById('form_montadora').scrollIntoView(); // Foca no formulário
-                    });
-
-                    const botaoRemover = document.createElement('button');
-                    botaoRemover.innerText = 'Remover';
-                    botaoRemover.style.marginLeft = '5px';
-
-                    botaoRemover.addEventListener('click', async () => {
-                        if (confirm(`Tem certeza que deseja remover a montadora ${montadora.nome}?`)) {
-                            await axios.delete(`http://localhost:8000/montadoras_delete/${montadora.id}`);
-                            alert(`Montadora ${montadora.nome} removida com sucesso!`);
-                            carregar_montadoras();
-                        }
-                    });
-
-                    item.appendChild(botaoEditar);
-                    item.appendChild(botaoRemover);
-
-                    lista.appendChild(item);
-                });
-            }
-        } catch (error) {
-            console.error('Erro ao carregar montadoras:', error);
-        }
-    }
-
-    function manipular_formulario_montadoras() {
-        const form_montadora = document.getElementById('form_montadora');
-        if (!form_montadora) return;
-
-        const input_nome = document.getElementById('nome');
-        const input_pais = document.getElementById('pais');
-        const input_ano = document.getElementById('ano');
-
-        form_montadora.onsubmit = async (event) => {
+    // Funções para Montadoras
+    const formMontadora = document.getElementById("form_montadora");
+    if (formMontadora) {
+        formMontadora.addEventListener("submit", async function(event) {
             event.preventDefault();
-            const nome_montadora = input_nome.value;
-            const pais_montadora = input_pais.value;
-            const ano_montadora = input_ano.value;
+            const nome = document.getElementById("nome").value;
+            const pais = document.getElementById("pais").value;
+            const ano = document.getElementById("ano").value;
+
+            const montadora = { nome, pais, ano };
 
             try {
+                let response;
                 if (montadoraEditando) {
-                    await axios.put(`http://localhost:8000/montadoras_update/${montadoraEditando.uuid}`, {
-                        nome: nome_montadora,
-                        pais: pais_montadora,
-                        ano: ano_montadora
-                    });
-                    alert(`Montadora ${montadoraEditando.nome} atualizada com sucesso!`);
-                    montadoraEditando = null;
+                    // Atualiza a montadora
+                    response = await axios.put(`http://127.0.0.1:8000/montadoras_update/${montadoraEditando.id}`, montadora);
+                    alert(response.data.mensagem || "Montadora atualizada com sucesso!");
+                    montadoraEditando = null; // Resetar a variável de edição
                 } else {
-                    await axios.post('http://localhost:8000/montadoras_save', {
-                        nome: nome_montadora,
-                        pais: pais_montadora,
-                        ano: ano_montadora
-                    });
-                    alert('Montadora cadastrada com sucesso!');
+                    // Cria uma nova montadora
+                    response = await axios.post("http://127.0.0.1:8000/montadoras_save", montadora);
+                    alert(response.data.mensagem || "Montadora salva com sucesso!");
                 }
-
-                carregar_montadoras();
-                form_montadora.reset(); 
+                listarMontadoras();
+                formMontadora.reset();
             } catch (error) {
-                console.error('Erro ao salvar montadora:', error);
+                console.error("Erro ao salvar montadora:", error);
             }
-        };
+        });
     }
 
-    async function carregar_modelos() {
+    async function listarMontadoras() {
         try {
-            const response = await axios.get('http://localhost:8000/modelos_list');
-            const modelos = response.data;
-            const lista = document.getElementById('modelos_list');
+            const response = await axios.get("http://127.0.0.1:8000/montadoras_list");
+            const montadorasList = document.getElementById("montadoras_list");
+            montadorasList.innerHTML = "";
+            response.data.forEach(montadora => {
+                const li = document.createElement("li");
+                li.textContent = `${montadora.nome} - ${montadora.pais} - ${montadora.ano} - ID: ${montadora.id}`;
 
-            if (lista) {
-                lista.innerHTML = '';
+                const botaoEditar = document.createElement("button");
+                botaoEditar.innerText = "Editar";
+                botaoEditar.onclick = () => {
+                    montadoraEditando = montadora;
+                    document.getElementById("nome").value = montadora.nome;
+                    document.getElementById("pais").value = montadora.pais;
+                    document.getElementById("ano").value = montadora.ano;
+                };
+                li.appendChild(botaoEditar);
 
-                modelos.forEach(modelo => {
-                    const item = document.createElement('li');
-                    const linha = `Nome: ${modelo.nome}, Montadora ID: ${modelo.montadora_id}, Valor: ${modelo.valor_referencia}, Motorização: ${modelo.motorizacao}, Turbo: ${modelo.turbo}, Automático: ${modelo.automatico}, ID: ${modelo.id}`;
-                    item.innerText = linha;
-
-                    // Criando o botão de Editar
-                    const botaoEditar = document.createElement('button');
-                    botaoEditar.innerText = 'Editar';
-                    botaoEditar.style.marginLeft = '10px';
-
-                    botaoEditar.addEventListener('click', () => {
-                        modeloEditando = modelo;
-                        document.getElementById('nome').value = modelo.nome;
-                        document.getElementById('montadora_id').value = modelo.montadora_id;
-                        document.getElementById('valor_referencia').value = modelo.valor_referencia;
-                        document.getElementById('motorizacao').value = modelo.motorizacao;
-                        document.getElementById('turbo').checked = modelo.turbo;
-                        document.getElementById('automatico').checked = modelo.automatico;
-                        document.getElementById('form_modelo').scrollIntoView();
-                    });
-
-                    const botaoRemover = document.createElement('button');
-                    botaoRemover.innerText = 'Remover';
-                    botaoRemover.style.marginLeft = '5px';
-
-                    botaoRemover.addEventListener('click', async () => {
-                        if (confirm(`Tem certeza que deseja remover o modelo ${modelo.nome}?`)) {
-                            await axios.delete(`http://localhost:8000/modelos_delete/${modelo.id}`);
-                            alert(`Modelo ${modelo.nome} removido com sucesso!`);
-                            carregar_modelos();
+                const botaoRemover = document.createElement("button");
+                botaoRemover.innerText = "Remover";
+                botaoRemover.onclick = async () => {
+                    if (confirm(`Tem certeza que deseja remover a montadora ${montadora.nome}?`)) {
+                        try {
+                            await axios.delete(`http://127.0.0.1:8000/montadoras_delete/${montadora.id}`);
+                            alert(`Montadora ${montadora.nome} removida com sucesso!`);
+                            listarMontadoras();
+                        } catch (error) {
+                            console.error("Erro ao remover montadora:", error);
                         }
-                    });
+                    }
+                };
+                li.appendChild(botaoRemover);
 
-                    item.appendChild(botaoEditar);
-                    item.appendChild(botaoRemover);
-
-                    lista.appendChild(item);
-                });
-            }
+                montadorasList.appendChild(li);
+            });
         } catch (error) {
-            console.error('Erro ao carregar modelos:', error);
+            console.error("Erro ao listar montadoras:", error);
         }
     }
 
-    function manipular_formulario_modelos() {
-        const form_modelo = document.getElementById('form_modelo');
-        if (!form_modelo) return;
-
-        const input_nome = document.getElementById('nome');
-        const input_montadora_id = document.getElementById('montadora_id');
-        const input_valor_referencia = document.getElementById('valor_referencia');
-        const input_motorizacao = document.getElementById('motorizacao');
-        const input_turbo = document.getElementById('turbo');
-        const input_automatico = document.getElementById('automatico');
-
-        form_modelo.onsubmit = async (event) => {
+    // Funções para Modelos
+    const formModelo = document.getElementById("form_modelo");
+    if (formModelo) {
+        formModelo.addEventListener("submit", async function(event) {
             event.preventDefault();
-            const nome_modelo = input_nome.value;
-            const montadora_id = input_montadora_id.value;
-            const valor_referencia = input_valor_referencia.value;
-            const motorizacao = input_motorizacao.value;
-            const turbo = input_turbo.checked;
-            const automatico = input_automatico.checked;
+            const nome = document.getElementById("nome_modelo").value;
+            const montadoraId = document.getElementById("montadora_id").value;
+            const valorReferencia = document.getElementById("valor_referencia").value;
+            const motorizacao = document.getElementById("motorizacao").value;
+            const turbo = document.getElementById("turbo").checked;
+            const automatico = document.getElementById("automatico").checked;
+
+            const modelo = {
+                nome,
+                montadora_id: montadoraId,
+                valor_referencia: valorReferencia,
+                motorizacao,
+                turbo,
+                automatico
+            };
 
             try {
+                let response;
                 if (modeloEditando) {
-                    await axios.put(`http://localhost:8000/modelos_update/${modeloEditando.id}`, {
-                        nome: nome_modelo,
-                        montadora_id: montadora_id,
-                        valor_referencia: valor_referencia,
-                        motorizacao: motorizacao,
-                        turbo: turbo,
-                        automatico: automatico
-                    });
-                    alert(`Modelo ${modeloEditando.nome} atualizado com sucesso!`);
-                    modeloEditando = null;
+                    response = await axios.put(`http://127.0.0.1:8000/modelos_update/${modeloEditando.id}`, modelo);
+                    alert(response.data.mensagem || "Modelo atualizado com sucesso!");
+                    modeloEditando = null; // Resetar a variável de edição
                 } else {
-                    await axios.post('http://localhost:8000/modelos_save', {
-                        nome: nome_modelo,
-                        montadora_id: montadora_id,
-                        valor_referencia: valor_referencia,
-                        motorizacao: motorizacao,
-                        turbo: turbo,
-                        automatico: automatico
-                    });
-                    alert(`Modelo ${nome_modelo} criado com sucesso!`);
+                    response = await axios.post("http://127.0.0.1:8000/modelos_save", modelo);
+                    alert(response.data.mensagem || "Modelo salvo com sucesso!");
                 }
-
-                form_modelo.reset();
-                carregar_modelos();
+                listarModelos();
+                formModelo.reset();
             } catch (error) {
-                console.error('Erro ao salvar modelo:', error);
+                console.error("Erro ao salvar modelo:", error);
             }
-        };
+        });
     }
 
-    async function carregar_veiculos() {
+    async function listarModelos() {
         try {
-            const response = await axios.get('http://localhost:8000/veiculos_list');
-            const veiculos = response.data;
-            const lista = document.getElementById('veiculos_list');
+            const response = await axios.get("http://127.0.0.1:8000/modelos_list");
+            const modelosList = document.getElementById("modelos_list");
+            modelosList.innerHTML = "";
+            response.data.forEach(modelo => {
+                const li = document.createElement("li");
+                li.textContent = `${modelo.nome} - ${modelo.montadora_id} - ${modelo.valor_referencia} - ${modelo.motorizacao} - ${modelo.turbo ? "Turbo" : "Não Turbo"} - ${modelo.automatico ? "Automático" : "Manual"} - ID: ${modelo.id}`;
 
-            if (lista) {
-                lista.innerHTML = '';
+                const botaoEditar = document.createElement("button");
+                botaoEditar.innerText = "Editar";
+                botaoEditar.onclick = () => {
+                    modeloEditando = modelo; 
+                    document.getElementById("nome_modelo").value = modelo.nome;
+                    document.getElementById("montadora_id").value = modelo.montadora_id;
+                    document.getElementById("valor_referencia").value = modelo.valor_referencia;
+                    document.getElementById("motorizacao").value = modelo.motorizacao;
+                    document.getElementById("turbo").checked = modelo.turbo;
+                    document.getElementById("automatico").checked = modelo.automatico;
+                };
+                li.appendChild(botaoEditar);
 
-                veiculos.forEach(veiculo => {
-                    const item = document.createElement('li');
-                    const vendidoText = veiculo.vendido ? 'Sim' : 'Não';
-                    const linha = `Modelo ID: ${veiculo.modelo_id}, Cor: ${veiculo.cor}, Ano de Fabricação: ${veiculo.ano_fabricacao}, Ano do Modelo: ${veiculo.ano_modelo}, Valor: R$ ${veiculo.valor.toFixed(2)}, Placa: ${veiculo.placa}, Vendido: ${vendidoText}`;
-                    item.innerText = linha;
-
-                    const botaoEditar = document.createElement('button');
-                    botaoEditar.innerText = 'Editar';
-                    botaoEditar.style.marginLeft = '10px';
-
-                    botaoEditar.addEventListener('click', () => {
-                        veiculoEditando = veiculo;
-                        document.getElementById('modelo_id').value = veiculo.modelo_id;
-                        document.getElementById('cor').value = veiculo.cor;
-                        document.getElementById('ano_fabricacao').value = veiculo.ano_fabricacao;
-                        document.getElementById('ano_modelo').value = veiculo.ano_modelo;
-                        document.getElementById('valor').value = veiculo.valor;
-                        document.getElementById('placa').value = veiculo.placa;
-                        document.getElementById('vendido').checked = veiculo.vendido;
-                        document.getElementById('form_veiculo').scrollIntoView(); 
-                    });
-
-                    const botaoRemover = document.createElement('button');
-                    botaoRemover.innerText = 'Remover';
-                    botaoRemover.style.marginLeft = '5px';
-
-                    botaoRemover.addEventListener('click', async () => {
-                        if (confirm(`Tem certeza que deseja remover o veículo ${veiculo.modelo_id}?`)) {
-                            await axios.delete(`http://localhost:8000/veiculos_delete/${veiculo.id}`);
-                            alert(`Veículo ${veiculo.modelo_id} removido com sucesso!`);
-                            carregar_veiculos(); 
+                const botaoRemover = document.createElement("button");
+                botaoRemover.innerText = "Remover";
+                botaoRemover.onclick = async () => {
+                    if (confirm(`Tem certeza que deseja remover o modelo ${modelo.nome}?`)) {
+                        try {
+                            await axios.delete(`http://127.0.0.1:8000/modelos_delete/${modelo.id}`);
+                            alert(`Modelo ${modelo.nome} removido com sucesso!`);
+                            listarModelos();
+                        } catch (error) {
+                            console.error("Erro ao remover modelo:", error);
                         }
-                    });
+                    }
+                };
+                li.appendChild(botaoRemover);
 
-                    item.appendChild(botaoEditar);
-                    item.appendChild(botaoRemover);
-
-                    lista.appendChild(item);
-                });
-            }
+                modelosList.appendChild(li);
+            });
         } catch (error) {
-            console.error('Erro ao carregar veículos:', error);
+            console.error("Erro ao listar modelos:", error);
         }
     }
 
-    function manipular_formulario_veiculos() {
-        const form_veiculo = document.getElementById('form_veiculo');
-        if (!form_veiculo) return;
-    
-        const input_modelo_id = document.getElementById('modelo_id');
-        const input_cor = document.getElementById('cor');
-        const input_ano_fabricacao = document.getElementById('ano_fabricacao');
-        const input_ano_modelo = document.getElementById('ano_modelo');
-        const input_valor = document.getElementById('valor');
-        const input_placa = document.getElementById('placa');
-        const input_vendido = document.getElementById('vendido');
-    
-        form_veiculo.onsubmit = async (event) => {
+    // Funções para Veículos
+    const formVeiculo = document.getElementById("form_veiculo");
+    if (formVeiculo) {
+        formVeiculo.addEventListener("submit", async function(event) {
             event.preventDefault();
-            const modelo_id = input_modelo_id.value;
-            const cor = input_cor.value;
-            const ano_fabricacao = input_ano_fabricacao.value;
-            const ano_modelo = input_ano_modelo.value;
-            const valor = parseFloat(input_valor.value);
-            const placa = input_placa.value;
-            const vendido = input_vendido.checked;
-    
-            try {
-                if (veiculoEditando) {
-                    await axios.put(`http://localhost:8000/veiculos_update/${veiculoEditando.id}`, {
-                        modelo_id: modelo_id,
-                        cor: cor,
-                        ano_fabricacao: ano_fabricacao,
-                        ano_modelo: ano_modelo,
-                        valor: valor,
-                        placa: placa,
-                        vendido: vendido
-                    });
-                    alert(`Veículo ${veiculoEditando.modelo_id} atualizado com sucesso!`);
-                    veiculoEditando = null; 
-                } else {
-                    await axios.post('http://localhost:8000/veiculos_save', {
-                        modelo_id: modelo_id,
-                        cor: cor,
-                        ano_fabricacao: ano_fabricacao,
-                        ano_modelo: ano_modelo,
-                        valor: valor,
-                        placa: placa,
-                        vendido: vendido
-                    });
-                    alert(`Veículo cadastrado com sucesso!`);
-                }
-    
-                form_veiculo.reset(); 
-                carregar_veiculos();  
-            } catch (error) {
-                console.error('Erro ao salvar veículo:', error);
-            }
-        };
-    }    
+            const modeloId = document.getElementById("modelo_id").value;
+            const cor = document.getElementById("cor").value;
+            const anoFabricacao = document.getElementById("ano_fabricacao").value;
+            const anoModelo = document.getElementById("ano_modelo").value;
+            const valor = document.getElementById("valor").value;
+            const placa = document.getElementById("placa").value;
+            const vendido = document.getElementById("vendido").checked;
 
-    function app() {
-        console.log('App carregado');
-        carregar_montadoras();
-        manipular_formulario_montadoras();
-        carregar_modelos();
-        manipular_formulario_modelos();
-        carregar_veiculos();
-        manipular_formulario_veiculos();
+            const veiculo = {
+                modelo_id: modeloId,
+                cor,
+                ano_fabricacao: anoFabricacao,
+                ano_modelo: anoModelo,
+                valor,
+                placa,
+                vendido
+            };
+
+            try {
+                let response;
+                if (veiculoEditando) {
+                    response = await axios.put(`http://127.0.0.1:8000/veiculos_update/${veiculoEditando.id}`, veiculo);
+                    alert(response.data.mensagem || "Veículo atualizado com sucesso!");
+                    veiculoEditando = null;
+                } else {
+                    response = await axios.post("http://127.0.0.1:8000/veiculos_save", veiculo);
+                    alert(response.data.mensagem || "Veículo salvo com sucesso!");
+                }
+                listarVeiculos();
+                formVeiculo.reset();
+            } catch (error) {
+                console.error("Erro ao salvar veículo:", error);
+            }
+        });
     }
 
-    app();
+    async function listarVeiculos() {
+        try {
+            const response = await axios.get("http://127.0.0.1:8000/veiculos_list");
+            const veiculosList = document.getElementById("veiculos_list");
+            veiculosList.innerHTML = "";
+            response.data.forEach(veiculo => {
+                const li = document.createElement("li");
+                li.textContent = `${veiculo.modelo_id} - ${veiculo.cor} - ${veiculo.ano_fabricacao} - ${veiculo.ano_modelo} - ${veiculo.valor} - ${veiculo.placa} - ${veiculo.vendido ? "Vendido" : "Disponível"} - ID: ${veiculo.id}`;
+
+                const botaoEditar = document.createElement("button");
+                botaoEditar.innerText = "Editar";
+                botaoEditar.onclick = () => {
+                    veiculoEditando = veiculo;
+                    document.getElementById("modelo_id").value = veiculo.modelo_id;
+                    document.getElementById("cor").value = veiculo.cor;
+                    document.getElementById("ano_fabricacao").value = veiculo.ano_fabricacao;
+                    document.getElementById("ano_modelo").value = veiculo.ano_modelo;
+                    document.getElementById("valor").value = veiculo.valor;
+                    document.getElementById("placa").value = veiculo.placa;
+                    document.getElementById("vendido").checked = veiculo.vendido;
+                };
+                li.appendChild(botaoEditar);
+
+                const botaoRemover = document.createElement("button");
+                botaoRemover.innerText = "Remover";
+                botaoRemover.onclick = async () => {
+                    if (confirm(`Tem certeza que deseja remover o veículo com placa ${veiculo.placa}?`)) {
+                        try {
+                            await axios.delete(`http://127.0.0.1:8000/veiculos_delete/${veiculo.id}`);
+                            alert(`Veículo com placa ${veiculo.placa} removido com sucesso!`);
+                            listarVeiculos();
+                        } catch (error) {
+                            console.error("Erro ao remover veículo:", error);
+                        }
+                    }
+                };
+                li.appendChild(botaoRemover);
+
+                veiculosList.appendChild(li);
+            });
+        } catch (error) {
+            console.error("Erro ao listar veículos:", error);
+        }
+    }
+
+    listarMontadoras();
+    listarModelos();
+    listarVeiculos();
 });

@@ -10,14 +10,14 @@
 <body>
     <h1>PatroCarsV2</h1>
     <button onclick="window.location.href='montadoras.html'">Ir para Montadoras</button>
-    <button onclick="window.location.href='veiculos.html'">Ir para Veiculos</button>
+    <button onclick="window.location.href='veiculos.html'">Ir para Veículos</button>
 
     <h2>Novo Modelo de Veículo</h2>
     <form id="form_modelo">
-        <input type="text" id="nome" placeholder="Nome do Modelo..">
-        <input type="text" id="montadora_id" placeholder="ID da Montadora..">
-        <input type="number" id="valor_referencia" placeholder="Valor de Referência..">
-        <input type="number" id="motorizacao" step="0.1" placeholder="Motorização (ex: 2.0)">
+        <input type="text" id="nome_modelo" placeholder="Nome do Modelo.." required>
+        <input type="text" id="montadora_id" placeholder="ID da Montadora.." required>
+        <input type="number" id="valor_referencia" placeholder="Valor de Referência.." required>
+        <input type="number" id="motorizacao" step="0.1" placeholder="Motorização (ex: 2.0)" required>
         <label for="turbo">Turbo</label>
         <input type="checkbox" id="turbo">
         <label for="automatico">Automático</label>
@@ -26,8 +26,6 @@
     </form>
 
     <h2>Modelos de Veículos Cadastrados</h2>
-    <ul id="modelos_list">
-    </ul>
-
+    <ul id="modelos_list"></ul>
 </body>
 </html>
